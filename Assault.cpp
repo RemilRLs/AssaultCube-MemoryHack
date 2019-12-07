@@ -92,20 +92,23 @@ bool Bypass::Write(uintptr_t IpBaseAddress,void *IpBuffer, SIZE_T nSize, SIZE_T 
     }
 }
 /*
-    - On lui donne l'handle pour qu'il puisse se rattacher à la classe
-    - On lui donne la baseadresse 
-    - On lui dit ou stocker la valeur, ici dans une structure
-    - On lui dit la taille de la structure (sa sera toujours un int)
+    - On lui donne l'handle pour qu'il puisse se rattacher à la classe.
+    - On lui donne la baseadresse .
+    - On lui dit ou stocker la valeur, ici dans une structure.
+    - On lui dit la taille de la structure (sa sera toujours un int).
+
+    - player est un pointeur pointant sur le type playerData et donc sur la structure. (-> permet d'avoir accès à une structure).
 */
-bool readDataPlayer(Bypass * handle, uintptr_t IpBaseAddress, playerData player, SIZE_T nSize){ 
-    handle->Read((IpBaseAddress + offsets.player_health), &player.player_health, sizeof(player.player_health));
-    handle->Read((IpBaseAddress + offsets.player_kev), &player.player_kev, sizeof(player.player_kev));
-    handle->Read((IpBaseAddress + offsets.player_pos_x), &player.player_pos_x, sizeof(player.player_pos_x));
-    handle->Read((IpBaseAddress + offsets.player_pos_y), &player.player_pos_y, sizeof(player.player_pos_z));
-    handle->Read((IpBaseAddress + offsets.player_pos_z), &player.player_pos_z, sizeof(player.player_pos_z));
-    handle->Read((IpBaseAddress + offsets.player_pos_head), &player.player_pos_head, sizeof(player.player_pos_head));
-    handle->Read((IpBaseAddress + offsets.player_x_mouse), &player.player_x_mouse, sizeof(player.player_x_mouse));
-    handle->Read((IpBaseAddress + offsets.player_y_mouse), &player.player_y_mouse, sizeof(player.player_y_mouse));
+
+bool readDataPlayer(Bypass * handle, uintptr_t IpBaseAddress, playerData *player, SIZE_T nSize){ 
+    handle->Read((IpBaseAddress + offsets.player_health), &player->player_health, sizeof(player->player_health));
+    handle->Read((IpBaseAddress + offsets.player_kev), &player->player_kev, sizeof(player->player_kev));
+    handle->Read((IpBaseAddress + offsets.player_pos_x), &player->player_pos_x, sizeof(player->player_pos_x));
+    handle->Read((IpBaseAddress + offsets.player_pos_y), &player->player_pos_y, sizeof(player->player_pos_z));
+    handle->Read((IpBaseAddress + offsets.player_pos_z), &player->player_pos_z, sizeof(player->player_pos_z));
+    handle->Read((IpBaseAddress + offsets.player_pos_head), &player->player_pos_head, sizeof(player->player_pos_head));
+    handle->Read((IpBaseAddress + offsets.player_x_mouse), &player->player_x_mouse, sizeof(player->player_x_mouse));
+    handle->Read((IpBaseAddress + offsets.player_y_mouse), &player->player_y_mouse, sizeof(player->player_y_mouse));
 }
 
 
@@ -145,7 +148,7 @@ int main(){
 
     Bypass* bypass = new Bypass(); // On crée la classe.
     if(!bypass->Attach(pid)){ // On génère les permissions souhaité sur le processus en question.
-        std::cout << "[X] - Exite" << std::endl;
+        std::cout << "[X] - Exit." << std::endl;
     } 
 
     uintptr_t baseAddress = adress.player_base;
@@ -154,6 +157,8 @@ int main(){
     if(!bypass->Read(baseAddress, &baseReference, sizeof(baseReference))){ 
         std::cout << "[X] - The base address could not be found. " << baseReference << std::endl;
     }
+
+
 
     baseAddress = baseReference; // On a la base adress.
     bool exit = false;
@@ -168,9 +173,17 @@ int main(){
     std::cout << "==============================================================\n\n[*] - Press a key : ";
 
     while(!exit){
+
+        if(!readDataPlayer(bypass, (baseAddress), &player, sizeof(player))){
+            std::cout << "[X] - We could not read the player's data." << std::endl;
+        }
+
+
         if(GetAsyncKeyState(VK_F1)){
             exit = true;
+            std::cout << "\n[*] - Exit." << std::endl;
         }
+        
         if(GetAsyncKeyState(VK_F2)){
             godmod = true;
         }
@@ -178,78 +191,22 @@ int main(){
             infinite_ammo = true;
         }
 
-        if(!readDataPlayer(bypass, (baseAddress), player, sizeof(player))){
+        if(!readDataPlayer(bypass, (baseAddress), &player, sizeof(player))){
             std::cout << "[X] We could not recover the player's values.\n[X]Exiting..." << std::endl;
             break;
         }
-
         if(godmod){
-                if(bypass->Write((baseAddress + offsets.player_health), &godMod, sizeof(player.player_health))){ // Health.
-                }
-                if(bypass->Write((baseAddress + offsets.player_kev), &playerKev, sizeof(playerKev))){ // Kevlar.
-                }
+             if(bypass->Write((baseAddress + offsets.player_health), &godMod, sizeof(player.player_health))){ // Health.
+            }
+            if(bypass->Write((baseAddress + offsets.player_kev), &playerKev, sizeof(playerKev))){ // Kevlar.
+            }
 
         }
         if(infinite_ammo){
             if(bypass->Write((baseAddress + offsets.player_ammo), &ammo, sizeof(ammo))){
             }
         }
-
     }
-
-/*
-   if(bypass->Read((baseAddress + offsets.player_health) , &player.player_health, sizeof(player.player_health))){
-    std::cout << "[*] - Value finds! [Health] The value is: " << std::dec << player.player_health << std::endl;
-   }
-*/
-
-// Création du godmod
-/*
-    std::cout << "[?] - Do you want to activate the Godmod (1) Yes / (2) No: ";
-    std::cin >> activateCheat;
-    std::cout << "\n" << std::endl;
-   
-    while(true){
-        if(activateCheat == 1){
-            std::cout << "[*] - Activation du Godmod." << std::endl;
-                if(bypass->Write((baseAddress + offsets.player_health), &godMod, sizeof(player.player_health))){ // Health.
-                    std::cout << "[*] - Valeur ecrite pour playerHealth: " << player.player_health << std::endl;
-                }
-                if(bypass->Write((baseAddress + offsets.player_kev), &playerKev, sizeof(playerKev))){ // Kevlar.
-                    std::cout << "[*] - Valeur ecrite pour playerKev : " << playerKev << std::endl;
-                }
-            break;
-        }
-        else{
-            std::cout << "[*] - End of the program" << std::endl;
-            break;
-        }
-    }
-
-*/
-
-/*
-
-    std::cout << "Donnez un ProcessID : ";
-    std::cin >> std::dec >> pid;
-    std::cout << "\nLe Process ID est : " << pid << ", verification..."  << std::endl;
-
-    Bypass* bypass = new Bypass(); // On crée la classe.
-
-    bypass->Attach(pid); // On utilise la méthode Attach pour attacher avoir un Handle.
-
-    uintptr_t memoryAddress = 0;
-
-    std::cout << "Veuillez donner une adresse a lire (en hexadecimale): ";
-    std::cin >> std::hex >> memoryAddress;
-    std::cout << "\nL'adresse a lire est : 0x"  << std::hex << memoryAddress << std::endl;
-
-    if(bypass->Read(memoryAddress, &intRead, sizeof(int))){
-        std::cout << "La valeur du Int est : " << std::dec << intRead << std::endl;
-    }
-    else{
-        std::cout << "Aucune valeur n'a pu etre lu" << std::endl;
-    }
-*/
-
+    delete bypass;
 }
+
