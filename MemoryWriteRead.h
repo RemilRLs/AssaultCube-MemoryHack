@@ -16,7 +16,11 @@ struct playerOffset{
 
 struct baseAddress{
     uintptr_t player_base = 0x509B74;
+    uintptr_t entityplayer = 0x50F4F8;
+    uintptr_t entitypointer; // Entitypointer va nous permettre d'avoir les vecteurs.
 }adress;
+
+/* Struct for the main player */
 
 struct playerData{
     int player_health;
@@ -30,6 +34,19 @@ struct playerData{
     float player_y_mouse;
 };
 
+/* Struct for the entity player */
+
+struct entityData{
+    int player_health;
+    int player_ammo; 
+    int player_kev;
+    float player_pos_x;
+    float player_pos_y;
+    float player_pos_z;
+    float player_pos_head;
+    float player_x_mouse;
+    float player_y_mouse;
+}entity;
 
 class Bypass { // Création d'une classe.
     public:
@@ -42,6 +59,7 @@ class Bypass { // Création d'une classe.
     bool Write(uintptr_t IpBaseAddress,void *IpBuffer, SIZE_T nSize, SIZE_T *IpNumberOfBytesWritten = NULL);
     bool readDataPlayer(uintptr_t IpBaseAddress, playerData *player);
     bool findPID();
+    bool readDataEntity(uintptr_t IpBaseAddress, entityData *player);
 
     private:
     HANDLE m_hProcess = NULL;
@@ -140,4 +158,14 @@ bool Bypass::readDataPlayer(uintptr_t IpBaseAddress, playerData *player){
     Read((IpBaseAddress + offsets.player_pos_head), &player->player_pos_head, sizeof(player->player_pos_head));
     Read((IpBaseAddress + offsets.player_x_mouse), &player->player_x_mouse, sizeof(player->player_x_mouse));
     Read((IpBaseAddress + offsets.player_y_mouse), &player->player_y_mouse, sizeof(player->player_y_mouse));
+}
+
+
+/* Fonction permettant de voir les coordonnées de plusieurs entités à la fois */
+
+bool Bypass::readDataEntity(uintptr_t IpBaseAddress, entityData *entity){
+    Read((IpBaseAddress + offsets.player_pos_x), &entity->player_pos_x, sizeof(entity->player_pos_x));
+    Read((IpBaseAddress + offsets.player_pos_y), &entity->player_pos_y, sizeof(entity->player_pos_y));
+    Read((IpBaseAddress + offsets.player_pos_z), &entity->player_pos_z, sizeof(entity->player_pos_z));
+    Read((IpBaseAddress + offsets.player_pos_head), &entity->player_pos_head, sizeof(entity->player_pos_head));
 }

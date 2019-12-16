@@ -32,16 +32,16 @@ int main(){
         std::cout << "[X] - Exit." << std::endl;
     } 
 
-    uintptr_t baseAddress = adress.player_base;
-    DWORD baseReference;
+    uintptr_t baseAddress = adress.player_base; // Ici on a la base adresse qui a l'adresse de la structure.
+    DWORD baseReference; // baseReference = Adresse de la structure.
 
     if(!bypass->Read(baseAddress, &baseReference, sizeof(baseReference))){ 
         std::cout << "[X] - The base address could not be found. " << baseReference << std::endl;
     }
 
 
-
     baseAddress = baseReference; // On a la base adress.
+    std::cout <<"BaseReference : " << std::hex << baseReference << std::endl;
     bool exit = false;
     bool godmod = false;
     bool infinite_ammo = false;
