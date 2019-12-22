@@ -1,17 +1,21 @@
 #include <iostream>
 #include <Windows.h>
+#include <math.h>
+#include "Vector3.h"
 
 struct playerOffset{
     uint32_t player_health = 0xF8; // uint32_t -> Assure que la valeur est unsigned.
     uint32_t player_ammo = 0x150;
     uint32_t player_ammo_pistolgun = 0x13C;
     uint32_t player_kev = 0xFC;
-    uint32_t player_pos_x = 0x04;
-    uint32_t player_pos_y = 0x3C;
-    uint32_t player_pos_z = 0x0C;
+    uint32_t player_pos_x = 0x4;
+    uint32_t player_pos_y = 0x8;
+    uint32_t player_pos_z = 0xC;
     uint32_t player_pos_head = 0x08;
-    uint32_t player_x_mouse = 0x44;
-    uint32_t player_y_mouse = 0x40;
+    uint32_t player_x_mouse = 0x40;
+    uint32_t player_y_mouse = 0x44;
+    uintptr_t player_team_1 = 0x204;
+    uintptr_t player_team_2 = 0x32C;
 }offsets; // Nom du type.
 
 struct baseAddress{
@@ -25,6 +29,8 @@ struct baseAddress{
 struct playerData{
     int player_health;
     int player_ammo; 
+    int player_team_1;
+    int player_team_2;
     int player_kev;
     float player_pos_x;
     float player_pos_y;
@@ -39,6 +45,8 @@ struct playerData{
 struct entityData{
     int player_health;
     int player_ammo; 
+    int player_team_1;
+    int player_team_2;
     int player_kev;
     float player_pos_x;
     float player_pos_y;
@@ -60,6 +68,9 @@ class Bypass { // Création d'une classe.
     bool readDataPlayer(uintptr_t IpBaseAddress, playerData *player);
     bool findPID();
     bool readDataEntity(uintptr_t IpBaseAddress, entityData *player);
+    void aimbot(uintptr_t IpBaseAddress, entityData entity, playerData player);
+    bool getOrigin(uintptr_t IpBaseAddress, playerData *player);
+    float getDistance(entityData entity, playerData player); // Permet d'avoir la distance (hypotenuse).
 
     private:
     HANDLE m_hProcess = NULL;
@@ -158,6 +169,8 @@ bool Bypass::readDataPlayer(uintptr_t IpBaseAddress, playerData *player){
     Read((IpBaseAddress + offsets.player_pos_head), &player->player_pos_head, sizeof(player->player_pos_head));
     Read((IpBaseAddress + offsets.player_x_mouse), &player->player_x_mouse, sizeof(player->player_x_mouse));
     Read((IpBaseAddress + offsets.player_y_mouse), &player->player_y_mouse, sizeof(player->player_y_mouse));
+    Read((IpBaseAddress + offsets.player_team_1), &player->player_team_1, sizeof(player->player_team_1)); // Check Team.
+    Read((IpBaseAddress + offsets.player_team_2), &player->player_team_2, sizeof(player->player_team_2));
 }
 
 
@@ -168,4 +181,53 @@ bool Bypass::readDataEntity(uintptr_t IpBaseAddress, entityData *entity){
     Read((IpBaseAddress + offsets.player_pos_y), &entity->player_pos_y, sizeof(entity->player_pos_y));
     Read((IpBaseAddress + offsets.player_pos_z), &entity->player_pos_z, sizeof(entity->player_pos_z));
     Read((IpBaseAddress + offsets.player_pos_head), &entity->player_pos_head, sizeof(entity->player_pos_head));
+    Read((IpBaseAddress + offsets.player_health), &entity->player_health, sizeof(entity->player_health));
+    Read((IpBaseAddress + offsets.player_team_1), &entity->player_team_1, sizeof(entity->player_team_1)); 
+    Read((IpBaseAddress + offsets.player_team_2), &entity->player_team_2, sizeof(entity->player_team_2)); 
+}
+
+float Bypass::getDistance(entityData entity, playerData player){
+    float positionSubX = (entity.player_pos_x - player.player_pos_x);
+    float positionSubY = (entity.player_pos_y - player.player_pos_y);
+    float positionSubZ = (entity.player_pos_z - player.player_pos_z);
+
+    float hypotenuse =sqrt((positionSubX * positionSubX) + (positionSubY * positionSubY) + (positionSubZ * positionSubZ));
+
+    return hypotenuse;
+}
+
+
+/* 
+- Tout d'abord il faut trouver l'angle de vue de notre joueur afin
+qu'il puisse tirer sur l'ennemie 
+
+- On a alors besoin de soustraire la position de l'ennemie avec la notre. (Permet d'être à l'origine)
+- 3.14 * 180 + 180 permet de rendre le résultat en degrée.
+- On a besoin de l'angle A (l'origine de notre joueur) On utilise Pythagor.
+
+
+*/
+double PI = 3.14159265358;
+
+void Bypass::aimbot(uintptr_t IpBaseAddress,entityData entity, playerData player){
+
+    view mouse;
+
+    float positionSubX = (entity.player_pos_x - player.player_pos_x);
+    float positionSubY = (entity.player_pos_y - player.player_pos_y);
+    float positionSubZ = (entity.player_pos_z - player.player_pos_z);
+
+    // On calcul l'hypothénuse :
+
+    float hypotenuse =sqrt((positionSubX * positionSubX) + (positionSubY * positionSubY) + (positionSubZ * positionSubZ));
+
+    mouse.x = -atan2(positionSubX,positionSubY) / PI * 180.0f + 180.0f;
+    mouse.y = asin(positionSubZ / hypotenuse)  * 180.0f / PI;
+    mouse.z = 0.0f;
+
+
+
+    Write((IpBaseAddress + offsets.player_x_mouse), &mouse.x, sizeof(float));
+    Write((IpBaseAddress + offsets.player_y_mouse), &mouse.y, sizeof(float));
+
 }
